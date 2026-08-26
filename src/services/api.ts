@@ -1,7 +1,12 @@
 import type { ForensicResult } from "../types/forensics";
 
 // This automatically uses your laptop's IP when viewed on the phone!
-const API_URL = import.meta.env.VITE_API_URL || `http://${window.location.hostname}:8000/api/v1`;
+// Strictly require the environment variable injected by Vercel
+const API_URL = import.meta.env.VITE_API_URL;
+
+if (!API_URL) {
+  console.warn("API URL is missing.");
+}
 export async function checkHealth() {
   const res = await fetch(`${API_URL}/health`);
   return res.json();
