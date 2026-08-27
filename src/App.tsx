@@ -28,7 +28,7 @@ function App() {
       const data = await analyzeDocument(file);
       setActiveResult({ ...data, previewUrl: URL.createObjectURL(file), filename: file.name });
     } catch (err) {
-      alert("Analysis failed. Ensure the Python API is running on localhost:8000.");
+      alert("Analysis failed. Unable to reach server");
     } finally {
       setLoading(false);
     }
