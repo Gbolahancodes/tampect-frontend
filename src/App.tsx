@@ -7,7 +7,7 @@ import { EvidenceTabs } from './components/EvidenceTabs';
 import { GuidelinesBanner } from './components/GuidelinesBanner';
 import { checkHealth, analyzeDocument, analyzeBatch } from './services/api';
 import type { ResultWithPreview } from './types/forensics';
-import { ArrowLeft, ArrowRight } from 'lucide-react';
+import { ArrowLeft, ArrowRight, AlertCircle, X } from 'lucide-react';
 import { motion } from 'motion/react';
 import { GlassCard, cn } from './components/GlassCard';
 
@@ -15,6 +15,7 @@ function App() {
   const [isOnline, setIsOnline] = useState(false);
   const [uploadMode, setUploadMode] = useState<'single' | 'batch'>('single');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [activeResult, setActiveResult] = useState<ResultWithPreview | null>(null);
   const [batchResults, setBatchResults] = useState<ResultWithPreview[]>([]);
 
@@ -24,11 +25,12 @@ function App() {
 
   const handleSingleAnalyze = async (file: File) => {
     setLoading(true);
+    setError(null);
     try {
       const data = await analyzeDocument(file);
       setActiveResult({ ...data, previewUrl: URL.createObjectURL(file), filename: file.name });
     } catch (err) {
-      alert("Analysis failed. Unable to reach server");
+      setError("Analysis failed. Unable to reach the server or process the image. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -36,6 +38,7 @@ function App() {
 
   const handleBatchAnalyze = async (files: File[]) => {
     setLoading(true);
+    setError(null);
     try {
       const data = await analyzeBatch(files);
       const resultsWithPreview = data.documents.map((doc: any) => {
@@ -44,7 +47,7 @@ function App() {
       });
       setBatchResults(resultsWithPreview);
     } catch (err) {
-      alert("Batch analysis failed. Ensure the Python API is running on localhost:8000.");
+      setError("Batch analysis failed. The server took too long or encountered an error.");
     } finally {
       setLoading(false);
     }
@@ -52,6 +55,7 @@ function App() {
 
   const reset = () => {
     setActiveResult(null);
+    setError(null);
     if (uploadMode === 'single') setBatchResults([]);
   };
 
@@ -60,6 +64,26 @@ function App() {
       <Navbar />
       
       <main className="max-w-4xl mx-auto space-y-8">
+
+        {/* Professional In-App Error Banner */}
+        {error && (
+          <motion.div 
+            initial={{ opacity: 0, y: -10 }} 
+            animate={{ opacity: 1, y: 0 }} 
+            className="bg-red-500/10 border border-red-500/20 text-red-400 px-4 py-3 rounded-2xl flex items-center justify-between text-sm backdrop-blur-xl"
+          >
+            <div className="flex items-center gap-3">
+              <AlertCircle className="w-5 h-5 shrink-0 text-red-400" />
+              <span>{error}</span>
+            </div>
+            <button 
+              onClick={() => setError(null)} 
+              className="p-1 hover:bg-red-500/20 rounded-lg transition-colors text-red-400 hover:text-red-300"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </motion.div>
+        )}
         
         {/* State 1: Upload Screens */}
         {!activeResult && batchResults.length === 0 && (
@@ -72,10 +96,16 @@ function App() {
             <GuidelinesBanner />
             
             <div className="flex justify-center space-x-4 mb-8">
-              <button onClick={() => { setUploadMode('single'); setBatchResults([]); }} className={cn("px-6 py-2 rounded-full text-sm font-bold transition-all duration-300", uploadMode === 'single' ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20")}>
+              <button 
+                onClick={() => { setUploadMode('single'); setBatchResults([]); setError(null); }} 
+                className={cn("px-6 py-2 rounded-full text-sm font-bold transition-all duration-300", uploadMode === 'single' ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20")}
+              >
                 Single Upload
               </button>
-              <button onClick={() => setUploadMode('batch')} className={cn("px-6 py-2 rounded-full text-sm font-bold transition-all duration-300", uploadMode === 'batch' ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20")}>
+              <button 
+                onClick={() => { setUploadMode('batch'); setError(null); }} 
+                className={cn("px-6 py-2 rounded-full text-sm font-bold transition-all duration-300", uploadMode === 'batch' ? "bg-white text-black" : "bg-white/10 text-white hover:bg-white/20")}
+              >
                 Batch Processing
               </button>
             </div>
