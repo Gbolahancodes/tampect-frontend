@@ -40,14 +40,22 @@ function App() {
     setLoading(true);
     setError(null);
     try {
-      const data = await analyzeBatch(files);
-      const resultsWithPreview = data.documents.map((doc: any) => {
-        const matchingFile = files.find(f => f.name === doc.filename);
-        return { ...doc, previewUrl: matchingFile ? URL.createObjectURL(matchingFile) : "" };
+      // Process each file individually in parallel to bypass Render's 30s timeout and RAM limits
+      const uploadPromises = files.map(async (file) => {
+        const data = await analyzeDocument(file);
+        return { 
+          ...data, 
+          previewUrl: URL.createObjectURL(file), 
+          filename: file.name 
+        };
       });
+
+      // Wait for all individual requests to finish
+      const resultsWithPreview = await Promise.all(uploadPromises);
       setBatchResults(resultsWithPreview);
+      
     } catch (err) {
-      setError("Batch analysis failed. The server took too long or encountered an error.");
+      setError("Batch analysis failed. One or more documents could not be processed.");
     } finally {
       setLoading(false);
     }
